@@ -170,7 +170,7 @@ export function RequestAQuotePage() {
                 className="w-full sm:w-auto inline-flex items-center justify-center bg-[#25D366] hover:bg-[#20ba59] text-white px-7 py-3.5 text-xs font-semibold uppercase tracking-widest transition-colors rounded-xs shadow-xs"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
-                <span>Submit to WhatsApp ({BUSINESS_CONFIG.whatsappDisplay})</span>
+                <span>Submit via WhatsApp</span>
               </button>
 
               <button
