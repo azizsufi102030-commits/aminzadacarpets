@@ -76,7 +76,7 @@ export function Header() {
             <img
               src={BUSINESS_CONFIG.logoUrl}
               alt="AMINZADA CARPETS"
-              className="h-12 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
             <button
               type="button"
@@ -165,18 +165,18 @@ export function Header() {
 
         {/* Main navigation bar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 sm:h-24">
+          <div className="flex items-center justify-between h-22 sm:h-26 md:h-28">
             
             {/* Definitive Brand Logo */}
             <Link
               href="/"
-              className="flex items-center py-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#5E0006]"
+              className="flex items-center py-1.5 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#5E0006]"
               aria-label="AMINZADA CARPETS — Return to Homepage"
             >
               <img
                 src={BUSINESS_CONFIG.logoUrl}
                 alt="AMINZADA CARPETS — Rugs & Carpets"
-                className="h-16 sm:h-20 w-auto object-contain"
+                className="h-18 sm:h-22 md:h-24 lg:h-26 w-auto object-contain"
               />
             </Link>
 

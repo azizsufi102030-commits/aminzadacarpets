@@ -29,7 +29,7 @@ export function Footer() {
               <img
                 src={BUSINESS_CONFIG.logoUrl}
                 alt="AMINZADA CARPETS"
-                className="h-16 w-auto object-contain"
+                className="h-20 w-auto object-contain"
               />
             </Link>
             <p className="text-xs text-[#FAF8F3]/70 leading-relaxed font-light">

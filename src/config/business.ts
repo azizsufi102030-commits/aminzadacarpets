@@ -44,8 +44,8 @@ export const BUSINESS_CONFIG: BusinessConfig = {
   whatsappBaseUrl: "https://wa.me/93781964444",
   instagramUrl: "https://www.instagram.com/aminzada_carpets?cplk=cXRlYnl1MzZwdHMx",
   facebookUrl: "https://www.facebook.com/share/1CcbQ4YTTD/",
-  logoUrl: "/assets/aistudio/342899367_796800991873200_5588820064674164492_n_6b4106de.jpg",
-  defaultOgImage: "/assets/aistudio/342899367_796800991873200_5588820064674164492_n_6b4106de.jpg",
+  logoUrl: "/assets/aistudio/aminzada_logo_cream.png",
+  defaultOgImage: "/assets/aistudio/aminzada_logo_cream.png",
   meta: {
     siteTitle: "AMINZADA CARPETS | Luxury Afghan Heritage",
     siteDescription: "Discover curated rugs and carpets inspired by traditional Afghan heritage, geometric motifs, and the art of living well."
