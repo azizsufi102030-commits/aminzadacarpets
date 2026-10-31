@@ -1,0 +1,8 @@
+{
+  "name": "AMINZADA CARPETS | Luxury Afghan Heritage",
+  "description": "Discover curated rugs and carpets inspired by traditional Afghan heritage, geometric motifs, and the art of living well.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

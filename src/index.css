@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-burgundy: #5E0006;
+  --color-carpet-red: #9B0F06;
+  --color-terracotta: #D53E0F;
+  --color-cream: #EED9B9;
+  --color-ivory: #FAF8F3;
+  --color-charcoal: #252321;
+  --color-stone: #77716B;
+
+  --font-serif: "Cormorant Garamond", Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --brand-burgundy: #5E0006;
+  --brand-red: #9B0F06;
+  --brand-terracotta: #D53E0F;
+  --brand-cream: #EED9B9;
+  --brand-ivory: #FAF8F3;
+  --brand-charcoal: #252321;
+  --brand-stone: #77716B;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #FAF8F3;
+  color: #252321;
+}
+
+.font-editorial {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+
+/* Subtle geometric borders and patterns */
+.border-heritage {
+  border-color: #EED9B9;
+}
+
+.bg-pattern-subtle {
+  background-image: radial-gradient(rgba(94, 0, 6, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
