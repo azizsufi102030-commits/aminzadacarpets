@@ -74,6 +74,9 @@ export function parseRoute(currentPath: string): { routeName: string; params: Re
   if (normalized === '/terms') {
     return { routeName: 'terms', params: {} };
   }
+  if (normalized === '/admin') {
+    return { routeName: 'admin', params: {} };
+  }
 
   return { routeName: 'not-found', params: {} };
 }

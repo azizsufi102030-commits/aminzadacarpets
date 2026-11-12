@@ -23,6 +23,7 @@ import { FaqPage } from './pages/FaqPage';
 import { RequestAQuotePage } from './pages/RequestAQuotePage';
 import { PrivacyPage, TermsPage } from './pages/LegalPages';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { AdminPage } from './pages/AdminPage';
 import { catalogService } from './services/catalogService';
 import { BUSINESS_CONFIG } from './config/business';
 
@@ -62,6 +63,8 @@ function AppContent() {
       title = `Privacy Policy | ${BUSINESS_CONFIG.name}`;
     } else if (routeName === 'terms') {
       title = `Terms & Conditions | ${BUSINESS_CONFIG.name}`;
+    } else if (routeName === 'admin') {
+      title = `Owner Admin Portal | ${BUSINESS_CONFIG.name}`;
     } else if (routeName === 'not-found') {
       title = `404 Not Found | ${BUSINESS_CONFIG.name}`;
     }
@@ -101,10 +104,16 @@ function AppContent() {
         return <PrivacyPage />;
       case 'terms':
         return <TermsPage />;
+      case 'admin':
+        return <AdminPage />;
       default:
         return <NotFoundPage />;
     }
   };
+
+  if (routeName === 'admin') {
+    return <AdminPage />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F3] text-[#252321]">

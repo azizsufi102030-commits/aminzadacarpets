@@ -99,3 +99,19 @@ export interface QuoteRequestData {
   projectScopeNotes?: string;
   preferredChannel: 'email' | 'whatsapp';
 }
+
+export interface InquiryRecord {
+  id: string;
+  type: 'quote' | 'contact' | 'wholesale';
+  fullName: string;
+  email: string;
+  phoneOrWhatsApp?: string;
+  productName?: string;
+  sku?: string;
+  collectionName?: string;
+  selectedSize?: string;
+  quantity?: string;
+  message?: string;
+  status: 'new' | 'contacted' | 'quoted' | 'closed';
+  createdAt: string;
+}

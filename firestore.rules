@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety catch-all: deny all unmatched
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Public carpet catalog: accessible to storefront and admin dashboard
+    match /products/{productId} {
+      allow read, write: if isValidId(productId);
+    }
+
+    // Collections: accessible to storefront and admin dashboard
+    match /collections/{collectionId} {
+      allow read, write: if isValidId(collectionId);
+    }
+
+    // Business & Contact Settings
+    match /settings/{settingId} {
+      allow read, write: if isValidId(settingId);
+    }
+
+    // Inquiries & Quote Requests: customer quote leads
+    match /inquiries/{inquiryId} {
+      allow read, write: if isValidId(inquiryId);
+    }
+  }
+}

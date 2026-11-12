@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Carpet or rug catalog item with specifications, 4-perspective images, and availability status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "sku": { "type": "string" },
+        "collectionId": { "type": "string" },
+        "collectionName": { "type": "string" },
+        "pattern": { "type": "string" },
+        "shortDescription": { "type": "string" },
+        "fullDescription": { "type": "string" },
+        "primaryColors": { "type": "array" },
+        "availableSizes": { "type": "array" },
+        "quality": { "type": "string" },
+        "materials": { "type": "string" },
+        "pileType": { "type": "string" },
+        "washingType": { "type": "string" },
+        "countryOfOrigin": { "type": "string" },
+        "availabilityStatus": { "type": "string" },
+        "images": { "type": "array" },
+        "isFeatured": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "slug", "sku", "collectionId", "collectionName"]
+    },
+    "Collection": {
+      "title": "Collection",
+      "description": "Carpet design collection grouping rugs by aesthetic tradition or regional weave heritage.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "shortDescription": { "type": "string" },
+        "editorialDescription": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "carpetCount": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "slug", "name"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Formal quotation or customer message submitted via the website.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "productName": { "type": "string" },
+        "sku": { "type": "string" },
+        "selectedSize": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phoneOrWhatsApp": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["fullName", "email"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Store contact details and business configurations.",
+      "type": "object",
+      "properties": {
+        "whatsappDisplay": { "type": "string" },
+        "whatsappDigits": { "type": "string" },
+        "telephoneDisplay": { "type": "string" },
+        "telephoneDial": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Public catalog of carpets and rugs with live status."
+    },
+    "/collections/{collectionId}": {
+      "schema": "Collection",
+      "description": "Carpet collections grouping designs."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Customer quote requests and inquiries."
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global store and contact settings."
+    }
+  }
+}

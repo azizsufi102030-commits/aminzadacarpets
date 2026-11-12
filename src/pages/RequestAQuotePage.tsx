@@ -14,6 +14,7 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { GeometricDivider } from '../components/GeometricDivider';
 import { BUSINESS_CONFIG } from '../config/business';
 import { QuoteRequestData } from '../types';
+import { catalogService } from '../services/catalogService';
 import { MessageCircle, Mail, Send, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export function RequestAQuotePage() {
@@ -107,6 +108,21 @@ export function RequestAQuotePage() {
     if (!validate()) return;
 
     setIsSubmitting(true);
+    
+    // Save lead to cloud Firestore inbox
+    catalogService.recordInquiry({
+      type: 'quote',
+      fullName: formData.fullName,
+      email: formData.email,
+      phoneOrWhatsApp: formData.phoneOrWhatsApp,
+      productName: formData.productName,
+      sku: formData.sku,
+      collectionName: formData.collectionName,
+      selectedSize: formData.selectedSize,
+      quantity: formData.quantity,
+      message: formData.projectScopeNotes
+    }).catch((err) => console.warn('Inquiry record note:', err));
+
     setTimeout(() => {
       setIsSubmitting(false);
       setPreparedSummary(generateQuoteMessage());
