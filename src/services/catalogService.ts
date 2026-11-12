@@ -5,6 +5,7 @@
  * with synchronous in-memory caching and offline fallback to ensure instantaneous renders.
  */
 
+import { useState, useEffect, useMemo } from 'react';
 import { COLLECTIONS_DATA } from '../data/collections';
 import { PRODUCTS_DATA } from '../data/products';
 import { CatalogFilterOptions, Collection, Product, InquiryRecord } from '../types';
@@ -34,15 +35,63 @@ export interface ICatalogRepository {
 type ChangeListener = () => void;
 
 class HybridFirestoreCatalogRepository implements ICatalogRepository {
-  private products: Product[] = PRODUCTS_DATA;
-  private collections: Collection[] = COLLECTIONS_DATA;
+  private products: Product[] = [];
+  private collections: Collection[] = [];
   private listeners: Set<ChangeListener> = new Set();
   private isInitialized = false;
 
   constructor() {
+    this.initLocalCache();
     if (typeof window !== 'undefined') {
       this.initFirestoreSync();
     }
+  }
+
+  private initLocalCache() {
+    let cachedProducts: Product[] = [];
+    let cachedCollections: Collection[] = [];
+
+    if (typeof window !== 'undefined') {
+      try {
+        const pRaw = localStorage.getItem('aminzada_cached_products');
+        if (pRaw) cachedProducts = JSON.parse(pRaw);
+        const cRaw = localStorage.getItem('aminzada_cached_collections');
+        if (cRaw) cachedCollections = JSON.parse(cRaw);
+      } catch (e) {
+        // Fall back to static
+      }
+    }
+
+    // Merge cached with static: match by id or slug
+    const prodMap = new Map<string, Product>();
+    PRODUCTS_DATA.forEach((p) => prodMap.set(p.id, p));
+    cachedProducts.forEach((cp) => {
+      let matchedKey: string | null = null;
+      for (const [key, val] of prodMap.entries()) {
+        if (key === cp.id || val.id === cp.id || val.slug === cp.slug) {
+          matchedKey = key;
+          break;
+        }
+      }
+      if (matchedKey) prodMap.delete(matchedKey);
+      prodMap.set(cp.id, cp);
+    });
+    this.products = Array.from(prodMap.values());
+
+    const colMap = new Map<string, Collection>();
+    COLLECTIONS_DATA.forEach((c) => colMap.set(c.id, c));
+    cachedCollections.forEach((cc) => {
+      let matchedKey: string | null = null;
+      for (const [key, val] of colMap.entries()) {
+        if (key === cc.id || val.id === cc.id || val.slug === cc.slug) {
+          matchedKey = key;
+          break;
+        }
+      }
+      if (matchedKey) colMap.delete(matchedKey);
+      colMap.set(cc.id, cc);
+    });
+    this.collections = Array.from(colMap.values());
   }
 
   public subscribe(listener: ChangeListener): () => void {
@@ -70,21 +119,43 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
       onSnapshot(
         productsRef,
         (snapshot) => {
-          if (!snapshot.empty) {
-            const remoteProducts: Product[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as Product;
-              remoteProducts.push({
-                ...data,
-                id: docSnap.id
-              });
+          const remoteProducts: Product[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as Product;
+            remoteProducts.push({
+              ...data,
+              id: docSnap.id
             });
-            this.products = remoteProducts;
-            this.notify();
-          }
+          });
+
+          // Merge: remote updates override static defaults by id or slug
+          const prodMap = new Map<string, Product>();
+          PRODUCTS_DATA.forEach((p) => prodMap.set(p.id, p));
+
+          remoteProducts.forEach((rp) => {
+            let matchedKey: string | null = null;
+            for (const [key, val] of prodMap.entries()) {
+              if (key === rp.id || val.id === rp.id || val.slug === rp.slug) {
+                matchedKey = key;
+                break;
+              }
+            }
+            if (matchedKey) {
+              prodMap.delete(matchedKey);
+            }
+            prodMap.set(rp.id, rp);
+          });
+
+          this.products = Array.from(prodMap.values());
+
+          try {
+            localStorage.setItem('aminzada_cached_products', JSON.stringify(this.products));
+          } catch (e) {}
+
+          this.notify();
         },
         (error) => {
-          console.warn('Firestore products snapshot listener warning:', error.message);
+          console.warn('Firestore products listener:', error.message);
         }
       );
 
@@ -93,21 +164,42 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
       onSnapshot(
         collectionsRef,
         (snapshot) => {
-          if (!snapshot.empty) {
-            const remoteCollections: Collection[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as Collection;
-              remoteCollections.push({
-                ...data,
-                id: docSnap.id
-              });
+          const remoteCollections: Collection[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as Collection;
+            remoteCollections.push({
+              ...data,
+              id: docSnap.id
             });
-            this.collections = remoteCollections;
-            this.notify();
-          }
+          });
+
+          const colMap = new Map<string, Collection>();
+          COLLECTIONS_DATA.forEach((c) => colMap.set(c.id, c));
+
+          remoteCollections.forEach((rc) => {
+            let matchedKey: string | null = null;
+            for (const [key, val] of colMap.entries()) {
+              if (key === rc.id || val.id === rc.id || val.slug === rc.slug) {
+                matchedKey = key;
+                break;
+              }
+            }
+            if (matchedKey) {
+              colMap.delete(matchedKey);
+            }
+            colMap.set(rc.id, rc);
+          });
+
+          this.collections = Array.from(colMap.values());
+
+          try {
+            localStorage.setItem('aminzada_cached_collections', JSON.stringify(this.collections));
+          } catch (e) {}
+
+          this.notify();
         },
         (error) => {
-          console.warn('Firestore collections snapshot listener warning:', error.message);
+          console.warn('Firestore collections listener:', error.message);
         }
       );
     } catch (err) {
@@ -150,30 +242,48 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
   // ================= ADMIN MUTATIONS =================
 
   public async saveProduct(product: Product): Promise<void> {
-    const productId = product.id || `product_${Date.now()}`;
+    const productId = product.id || `prod_${Date.now()}`;
     const cleanProduct: Product = {
       ...product,
       id: productId,
       updatedAt: new Date().toISOString()
     };
 
-    // Save to Firestore
-    await setDoc(doc(db, 'products', productId), cleanProduct);
-
     // Update in-memory cache immediately
-    const idx = this.products.findIndex((p) => p.id === productId);
+    const idx = this.products.findIndex((p) => p.id === productId || p.slug === cleanProduct.slug);
     if (idx >= 0) {
       this.products[idx] = cleanProduct;
     } else {
       this.products.unshift(cleanProduct);
     }
+
+    try {
+      localStorage.setItem('aminzada_cached_products', JSON.stringify(this.products));
+    } catch (e) {}
+
     this.notify();
+
+    // Save to Firestore
+    try {
+      await setDoc(doc(db, 'products', productId), cleanProduct);
+    } catch (remoteErr) {
+      console.error('Failed to write to remote Firestore:', remoteErr);
+      throw remoteErr;
+    }
   }
 
   public async deleteProduct(productId: string): Promise<void> {
-    await deleteDoc(doc(db, 'products', productId));
     this.products = this.products.filter((p) => p.id !== productId);
+    try {
+      localStorage.setItem('aminzada_cached_products', JSON.stringify(this.products));
+    } catch (e) {}
     this.notify();
+
+    try {
+      await deleteDoc(doc(db, 'products', productId));
+    } catch (err) {
+      console.warn('Remote deletion note:', err);
+    }
   }
 
   public async saveCollection(collectionData: Collection): Promise<void> {
@@ -183,21 +293,39 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
       id: colId
     };
 
-    await setDoc(doc(db, 'collections', colId), cleanCol);
-
     const idx = this.collections.findIndex((c) => c.id === colId);
     if (idx >= 0) {
       this.collections[idx] = cleanCol;
     } else {
       this.collections.push(cleanCol);
     }
+
+    try {
+      localStorage.setItem('aminzada_cached_collections', JSON.stringify(this.collections));
+    } catch (e) {}
+
     this.notify();
+
+    try {
+      await setDoc(doc(db, 'collections', colId), cleanCol);
+    } catch (remoteErr) {
+      console.error('Failed to write collection to remote Firestore:', remoteErr);
+      throw remoteErr;
+    }
   }
 
   public async deleteCollection(collectionId: string): Promise<void> {
-    await deleteDoc(doc(db, 'collections', collectionId));
     this.collections = this.collections.filter((c) => c.id !== collectionId);
+    try {
+      localStorage.setItem('aminzada_cached_collections', JSON.stringify(this.collections));
+    } catch (e) {}
     this.notify();
+
+    try {
+      await deleteDoc(doc(db, 'collections', collectionId));
+    } catch (err) {
+      console.warn('Remote collection deletion note:', err);
+    }
   }
 
   // ================= INQUIRIES & QUOTE LEADS =================
@@ -216,7 +344,7 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
     try {
       await setDoc(doc(db, 'inquiries', id), record);
     } catch (err) {
-      console.warn('Could not save inquiry to remote Firestore (offline or rule blocked):', err);
+      console.warn('Could not save inquiry to remote Firestore:', err);
     }
     return id;
   }
@@ -367,3 +495,44 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
 }
 
 export const catalogService = new HybridFirestoreCatalogRepository();
+
+/**
+ * React hook that subscribes the calling component to live catalog updates
+ * Returns a stable reference that updates whenever the database syncs,
+ * ensuring React useMemo and re-renders pick up updated products/collections immediately.
+ */
+export function useCatalog() {
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    return catalogService.subscribe(() => {
+      setVersion((v) => v + 1);
+    });
+  }, []);
+
+  return useMemo(
+    () => ({
+      version,
+      getAllProducts: () => catalogService.getAllProducts(),
+      getPublishedProducts: () => catalogService.getPublishedProducts(),
+      getProductBySlug: (slug: string) => catalogService.getProductBySlug(slug),
+      getProductsByCollection: (col: string) => catalogService.getProductsByCollection(col),
+      searchProducts: (filters: CatalogFilterOptions) => catalogService.searchProducts(filters),
+      getAllCollections: () => catalogService.getAllCollections(),
+      getCollectionBySlug: (slug: string) => catalogService.getCollectionBySlug(slug),
+      getRelatedProducts: (id: string, limit?: number) => catalogService.getRelatedProducts(id, limit),
+      saveProduct: (p: Product) => catalogService.saveProduct(p),
+      deleteProduct: (id: string) => catalogService.deleteProduct(id),
+      saveCollection: (c: Collection) => catalogService.saveCollection(c),
+      deleteCollection: (id: string) => catalogService.deleteCollection(id),
+      recordInquiry: (inq: Omit<InquiryRecord, 'id' | 'createdAt' | 'status'>) =>
+        catalogService.recordInquiry(inq),
+      getAllInquiries: () => catalogService.getAllInquiries(),
+      updateInquiryStatus: (id: string, status: InquiryRecord['status']) =>
+        catalogService.updateInquiryStatus(id, status),
+      deleteInquiry: (id: string) => catalogService.deleteInquiry(id),
+      seedInitialDataIfEmpty: () => catalogService.seedInitialDataIfEmpty(),
+    }),
+    [version]
+  );
+}

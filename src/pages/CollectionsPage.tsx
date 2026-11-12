@@ -5,13 +5,14 @@
  */
 
 import React from 'react';
-import { catalogService } from '../services/catalogService';
+import { catalogService, useCatalog } from '../services/catalogService';
 import { CollectionCard } from '../components/CollectionCard';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { GeometricDivider } from '../components/GeometricDivider';
 
 export function CollectionsPage() {
-  const collections = catalogService.getAllCollections();
+  const catalog = useCatalog();
+  const collections = catalog.getAllCollections();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-10">

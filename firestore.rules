@@ -13,22 +13,25 @@ service cloud.firestore {
 
     // Public carpet catalog: accessible to storefront and admin dashboard
     match /products/{productId} {
-      allow read, write: if isValidId(productId);
+      allow read: if true;
+      allow write: if isValidId(productId);
     }
 
     // Collections: accessible to storefront and admin dashboard
     match /collections/{collectionId} {
-      allow read, write: if isValidId(collectionId);
+      allow read: if true;
+      allow write: if isValidId(collectionId);
     }
 
     // Business & Contact Settings
     match /settings/{settingId} {
-      allow read, write: if isValidId(settingId);
+      allow read: if true;
+      allow write: if isValidId(settingId);
     }
 
     // Inquiries & Quote Requests: customer quote leads
     match /inquiries/{inquiryId} {
-      allow read, write: if isValidId(inquiryId);
+      allow read, write: if true;
     }
   }
 }

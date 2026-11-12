@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { Link } from '../router/Router';
-import { catalogService } from '../services/catalogService';
+import { catalogService, useCatalog } from '../services/catalogService';
 import { ProductCard } from '../components/ProductCard';
 import { CollectionCard } from '../components/CollectionCard';
 import { GeometricDivider } from '../components/GeometricDivider';
@@ -22,9 +22,10 @@ import { buildGeneralWhatsAppUrl } from '../utils/whatsapp';
 import { ArrowRight, MessageCircle, ShieldCheck, Compass, Sparkles, Sliders } from 'lucide-react';
 
 export function HomePage() {
-  const collections = catalogService.getAllCollections();
+  const catalog = useCatalog();
+  const collections = catalog.getAllCollections();
   // Highlight 6 featured products across different styles
-  const allProducts = catalogService.getPublishedProducts();
+  const allProducts = catalog.getPublishedProducts();
   const featuredProducts = [
     allProducts.find(p => p.slug === 'heritage-medallion-rug'),
     allProducts.find(p => p.slug === 'afghan-geometric-pattern-rug'),

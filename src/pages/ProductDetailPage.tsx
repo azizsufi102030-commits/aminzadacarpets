@@ -13,7 +13,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, Link } from '../router/Router';
-import { catalogService } from '../services/catalogService';
+import { catalogService, useCatalog } from '../services/catalogService';
 import { ProductGallery } from '../components/ProductGallery';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductCard } from '../components/ProductCard';
@@ -22,9 +22,10 @@ import { buildProductWhatsAppUrl } from '../utils/whatsapp';
 import { MessageCircle, FileText, ArrowLeft, ShieldAlert, Check, HelpCircle } from 'lucide-react';
 
 export function ProductDetailPage() {
+  const catalog = useCatalog();
   const { params } = useRouter();
   const slug = params.slug || '';
-  const product = catalogService.getProductBySlug(slug);
+  const product = catalog.getProductBySlug(slug);
 
   const [selectedSize, setSelectedSize] = useState<string>(() => {
     return product && product.availableSizes.length > 0 ? product.availableSizes[0] : '';
@@ -48,9 +49,9 @@ export function ProductDetailPage() {
     );
   }
 
-  const relatedProducts = catalogService.getRelatedProducts(product.id, 3);
-  const collection = catalogService.getCollectionBySlug(product.collectionId) || 
-    catalogService.getAllCollections().find(c => c.id === product.collectionId);
+  const relatedProducts = catalog.getRelatedProducts(product.id, 3);
+  const collection = catalog.getCollectionBySlug(product.collectionId) || 
+    catalog.getAllCollections().find(c => c.id === product.collectionId);
 
   const whatsappUrl = buildProductWhatsAppUrl({
     productName: product.name,

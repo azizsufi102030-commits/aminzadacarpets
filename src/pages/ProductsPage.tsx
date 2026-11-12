@@ -13,12 +13,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { catalogService } from '../services/catalogService';
+import { catalogService, useCatalog } from '../services/catalogService';
 import { ProductCard } from '../components/ProductCard';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Search, Filter, RotateCcw, X, SlidersHorizontal } from 'lucide-react';
 
 export function ProductsPage() {
+  const catalog = useCatalog();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCollection, setSelectedCollection] = useState('all');
   const [selectedPattern, setSelectedPattern] = useState('all');
@@ -26,10 +27,10 @@ export function ProductsPage() {
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'newest'>('name-asc');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  const collections = catalogService.getAllCollections();
+  const collections = catalog.getAllCollections();
 
   // Distinct patterns for filtering
-  const allProducts = useMemo(() => catalogService.getAllProducts(), []);
+  const allProducts = catalog.getAllProducts();
   
   const patternOptions = useMemo(() => {
     return [
@@ -54,14 +55,14 @@ export function ProductsPage() {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    return catalogService.searchProducts({
+    return catalog.searchProducts({
       query: searchQuery,
       collectionId: selectedCollection,
       pattern: selectedPattern,
       color: selectedColor,
       sortBy: sortBy
     });
-  }, [searchQuery, selectedCollection, selectedPattern, selectedColor, sortBy]);
+  }, [catalog, searchQuery, selectedCollection, selectedPattern, selectedColor, sortBy]);
 
   const hasActiveFilters = 
     searchQuery.trim().length > 0 ||

@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { useRouter } from '../router/Router';
-import { catalogService } from '../services/catalogService';
+import { catalogService, useCatalog } from '../services/catalogService';
 import { ProductCard } from '../components/ProductCard';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { GeometricDivider } from '../components/GeometricDivider';
@@ -17,9 +17,10 @@ import { Link } from '../router/Router';
 import { ArrowLeft } from 'lucide-react';
 
 export function CollectionDetailPage() {
+  const catalog = useCatalog();
   const { params } = useRouter();
   const slug = params.slug || '';
-  const collection = catalogService.getCollectionBySlug(slug);
+  const collection = catalog.getCollectionBySlug(slug);
 
   if (!collection) {
     return (
@@ -39,7 +40,7 @@ export function CollectionDetailPage() {
     );
   }
 
-  const products = catalogService.getProductsByCollection(collection.slug);
+  const products = catalog.getProductsByCollection(collection.slug);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-10">
