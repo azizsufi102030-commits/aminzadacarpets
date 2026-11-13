@@ -536,7 +536,7 @@ export function AdminPage() {
 
           <div className="text-center pt-2 border-t border-[#EED9B9]/60">
             <p className="text-[11px] text-[#77716B]">
-              Default store passcode: <code className="bg-[#FAF8F3] px-1.5 py-0.5 border border-[#EED9B9] font-mono font-semibold text-[#5E0006]">aminzada2026</code>
+              Authorized store administrators only.
             </p>
           </div>
         </div>
