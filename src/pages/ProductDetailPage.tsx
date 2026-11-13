@@ -11,7 +11,7 @@
  * - Buyer verification disclosure notice
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, Link } from '../router/Router';
 import { catalogService, useCatalog } from '../services/catalogService';
 import { ProductGallery } from '../components/ProductGallery';
@@ -30,6 +30,14 @@ export function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState<string>(() => {
     return product && product.availableSizes.length > 0 ? product.availableSizes[0] : '';
   });
+
+  useEffect(() => {
+    if (product && product.availableSizes.length > 0) {
+      if (!selectedSize || !product.availableSizes.includes(selectedSize)) {
+        setSelectedSize(product.availableSizes[0]);
+      }
+    }
+  }, [product, selectedSize]);
 
   if (!product) {
     return (

@@ -368,6 +368,99 @@ export function AdminPage() {
     }
   };
 
+  // ---------------- COLLECTIONS CRUD ----------------
+
+  const openAddCollectionModal = () => {
+    setEditingCollection(null);
+    setCollectionForm({
+      name: '',
+      slug: '',
+      description: '',
+      coverImage: ''
+    });
+    setIsCollectionModalOpen(true);
+  };
+
+  const openEditCollectionModal = (col: Collection) => {
+    setEditingCollection(col);
+    setCollectionForm({
+      name: col.name,
+      slug: col.slug,
+      description: col.description,
+      coverImage: col.coverImage
+    });
+    setIsCollectionModalOpen(true);
+  };
+
+  const handleCollectionCoverUpload = async (file: File) => {
+    setUploadingImageRole('collection-cover');
+    try {
+      const url = await uploadCarpetImage(file, 'collections');
+      setCollectionForm((prev) => ({ ...prev, coverImage: url }));
+      showFeedback('Collection cover image uploaded!', 'success');
+    } catch (err) {
+      showFeedback('Failed to upload cover image.', 'error');
+    } finally {
+      setUploadingImageRole(null);
+    }
+  };
+
+  const handleSaveCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collectionForm.name.trim()) {
+      showFeedback('Collection name is required.', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const id = editingCollection?.id || `col_${Date.now()}`;
+      const slug =
+        editingCollection?.slug ||
+        collectionForm.slug.trim() ||
+        collectionForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      const collectionToSave: Collection = {
+        id,
+        name: collectionForm.name.trim(),
+        slug,
+        description:
+          collectionForm.description.trim() ||
+          `Curated selection of fine ${collectionForm.name.trim()} crafted with traditional artistry.`,
+        coverImage:
+          collectionForm.coverImage ||
+          editingCollection?.coverImage ||
+          '/assets/aistudio/homepage_hero_showcase_image_b47979ab.webp',
+        seoTitle: `${collectionForm.name.trim()} | AMINZADA CARPETS`,
+        seoDescription:
+          collectionForm.description.trim() ||
+          `Explore ${collectionForm.name.trim()} at AMINZADA CARPETS.`,
+        relatedProductIds: editingCollection?.relatedProductIds || [],
+        published: true
+      };
+
+      await catalogService.saveCollection(collectionToSave);
+      setIsCollectionModalOpen(false);
+      showFeedback(`Collection "${collectionToSave.name}" saved and published!`, 'success');
+    } catch (err) {
+      console.error(err);
+      showFeedback('Failed to save collection. Please check connection.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCollection = async (id: string, name: string) => {
+    if (window.confirm(`Remove collection "${name}" from the storefront?`)) {
+      try {
+        await catalogService.deleteCollection(id);
+        showFeedback(`Collection "${name}" removed.`, 'success');
+      } catch (err) {
+        showFeedback('Could not delete collection.', 'error');
+      }
+    }
+  };
+
   const handleSeedCatalogToCloud = async () => {
     setIsSaving(true);
     try {
@@ -756,11 +849,19 @@ export function AdminPage() {
         {/* ================= TAB 2: COLLECTIONS ================= */}
         {activeTab === 'collections' && (
           <div className="space-y-6">
-            <div className="bg-[#FFFFFF] p-5 border border-[#EED9B9] rounded-xs flex items-center justify-between">
+            <div className="bg-[#FFFFFF] p-5 border border-[#EED9B9] rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="font-editorial text-2xl text-[#252321] font-medium">Design Collections</h2>
-                <p className="text-xs text-[#77716B]">Manage carpet collections and banner cover photographs.</p>
+                <p className="text-xs text-[#77716B]">Create, edit, or update carpet collections and banner cover photographs.</p>
               </div>
+              <button
+                type="button"
+                onClick={openAddCollectionModal}
+                className="inline-flex items-center justify-center bg-[#5E0006] hover:bg-[#9B0F06] text-[#FAF8F3] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-xs transition-colors shadow-xs"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                <span>Add New Collection</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -768,7 +869,7 @@ export function AdminPage() {
                 const count = products.filter((p) => p.collectionId === col.id).length;
 
                 return (
-                  <div key={col.id} className="bg-[#FFFFFF] border border-[#EED9B9] rounded-xs overflow-hidden shadow-xs">
+                  <div key={col.id} className="bg-[#FFFFFF] border border-[#EED9B9] rounded-xs overflow-hidden shadow-xs flex flex-col">
                     <div className="relative aspect-16/9 bg-[#FAF8F3] overflow-hidden border-b border-[#EED9B9]">
                       <img src={col.coverImage} alt={col.name} className="w-full h-full object-cover" />
                       <div className="absolute top-2 left-2 bg-[#5E0006] text-[#FAF8F3] text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-xs">
@@ -776,7 +877,7 @@ export function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="p-4 space-y-2">
+                    <div className="p-4 space-y-2 flex-1">
                       <h3 className="font-editorial text-xl text-[#252321] font-medium">{col.name}</h3>
                       <p className="text-xs text-[#77716B] line-clamp-2 leading-relaxed">{col.description}</p>
                     </div>
@@ -791,6 +892,25 @@ export function AdminPage() {
                         <Eye className="w-3.5 h-3.5" />
                         <span>View Public Page</span>
                       </a>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditCollectionModal(col)}
+                          className="inline-flex items-center text-xs text-[#5E0006] hover:bg-[#EED9B9]/30 p-1.5 rounded-xs transition-colors font-medium"
+                        >
+                          <Edit className="w-3.5 h-3.5 mr-1" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCollection(col.id, col.name)}
+                          className="inline-flex items-center text-xs text-[#D53E0F] hover:bg-[#D53E0F]/10 p-1.5 rounded-xs transition-colors"
+                          title="Delete Collection"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1191,6 +1311,18 @@ export function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[#EED9B9]">
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-[#77716B] font-semibold mb-1">
+                    Pattern / Motif Style
+                  </label>
+                  <input
+                    type="text"
+                    value={productForm.pattern}
+                    onChange={(e) => setProductForm({ ...productForm, pattern: e.target.value })}
+                    className="w-full bg-[#FAF8F3] border border-[#EED9B9] px-3 py-2 text-xs text-[#252321] rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#77716B] font-semibold mb-1">
                     Primary Colors (comma separated)
                   </label>
                   <input
@@ -1227,6 +1359,30 @@ export function AdminPage() {
 
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-[#77716B] font-semibold mb-1">
+                    Pile Type / Height
+                  </label>
+                  <input
+                    type="text"
+                    value={productForm.pileType}
+                    onChange={(e) => setProductForm({ ...productForm, pileType: e.target.value })}
+                    className="w-full bg-[#FAF8F3] border border-[#EED9B9] px-3 py-2 text-xs text-[#252321] rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#77716B] font-semibold mb-1">
+                    Washing Type
+                  </label>
+                  <input
+                    type="text"
+                    value={productForm.washingType}
+                    onChange={(e) => setProductForm({ ...productForm, washingType: e.target.value })}
+                    className="w-full bg-[#FAF8F3] border border-[#EED9B9] px-3 py-2 text-xs text-[#252321] rounded-xs"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs uppercase tracking-wider text-[#77716B] font-semibold mb-1">
                     Country of Origin
                   </label>
                   <input
@@ -1250,13 +1406,129 @@ export function AdminPage() {
 
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || uploadingImageRole !== null}
                   className="bg-[#5E0006] hover:bg-[#9B0F06] text-[#FAF8F3] px-8 py-3 text-xs font-semibold uppercase tracking-widest rounded-xs transition-colors shadow-xs disabled:opacity-50"
                 >
-                  {isSaving ? 'Publishing...' : editingProduct ? 'Save Changes' : 'Publish Carpet to Live Site'}
+                  {uploadingImageRole !== null
+                    ? 'Uploading Photo...'
+                    : isSaving
+                    ? 'Publishing...'
+                    : editingProduct
+                    ? 'Save Changes'
+                    : 'Publish Carpet to Live Site'}
                 </button>
               </div>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ADD / EDIT COLLECTION ================= */}
+      {isCollectionModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#252321]/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-[#FFFFFF] border-2 border-[#5E0006] w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-xs shadow-2xl p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-[#EED9B9] pb-4">
+              <div>
+                <h2 className="font-editorial text-2xl text-[#252321] font-semibold">
+                  {editingCollection ? 'Edit Collection' : 'Add New Collection'}
+                </h2>
+                <p className="text-xs text-[#77716B]">
+                  Update the collection title, editorial description, or cover photograph.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCollectionModalOpen(false)}
+                className="p-2 text-[#77716B] hover:text-[#5E0006]"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCollection} className="space-y-5">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#252321] font-semibold mb-1">
+                  Collection Name <span className="text-[#D53E0F]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={collectionForm.name}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, name: e.target.value })}
+                  placeholder="e.g. Royal Silk & Ghazni Wool"
+                  className="w-full bg-[#FAF8F3] border border-[#EED9B9] px-3.5 py-2.5 text-xs text-[#252321] rounded-xs focus:outline-hidden focus:border-[#5E0006]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#252321] font-semibold mb-1">
+                  Collection Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={collectionForm.description}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, description: e.target.value })}
+                  placeholder="Describe the heritage motifs and space character of this collection..."
+                  className="w-full bg-[#FAF8F3] border border-[#EED9B9] px-3.5 py-2.5 text-xs text-[#252321] rounded-xs focus:outline-hidden focus:border-[#5E0006]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs uppercase tracking-wider text-[#252321] font-semibold">
+                  Collection Cover Photograph
+                </label>
+                <label className="relative block aspect-16/9 border-2 border-dashed border-[#EED9B9] hover:border-[#5E0006] rounded-xs bg-[#FAF8F3] cursor-pointer overflow-hidden group">
+                  {collectionForm.coverImage ? (
+                    <>
+                      <img src={collectionForm.coverImage} alt="Collection Cover" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-semibold transition-opacity">
+                        Tap to Replace Cover Image
+                      </div>
+                    </>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-1">
+                      <Camera className="w-7 h-7 text-[#77716B]" />
+                      <span className="text-xs text-[#77716B]">
+                        {uploadingImageRole === 'collection-cover' ? 'Uploading...' : 'Tap to Upload Cover Photo'}
+                      </span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImageRole === 'collection-cover'}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCollectionCoverUpload(file);
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="pt-4 border-t border-[#EED9B9] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCollectionModalOpen(false)}
+                  className="px-5 py-2.5 text-xs text-[#77716B] hover:text-[#252321] font-semibold uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || uploadingImageRole !== null}
+                  className="bg-[#5E0006] hover:bg-[#9B0F06] text-[#FAF8F3] px-8 py-3 text-xs font-semibold uppercase tracking-widest rounded-xs transition-colors shadow-xs disabled:opacity-50"
+                >
+                  {uploadingImageRole === 'collection-cover'
+                    ? 'Uploading Photo...'
+                    : isSaving
+                    ? 'Saving...'
+                    : editingCollection
+                    ? 'Save Collection'
+                    : 'Publish Collection'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

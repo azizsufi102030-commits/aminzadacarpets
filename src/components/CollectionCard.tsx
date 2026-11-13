@@ -8,7 +8,7 @@
 import React from 'react';
 import { Collection } from '../types';
 import { Link } from '../router/Router';
-import { catalogService } from '../services/catalogService';
+import { catalogService, useCatalog } from '../services/catalogService';
 import { ArrowRight } from 'lucide-react';
 
 interface CollectionCardProps {
@@ -17,7 +17,8 @@ interface CollectionCardProps {
 }
 
 export function CollectionCard({ collection, className = '' }: CollectionCardProps) {
-  const productsInCollection = catalogService.getProductsByCollection(collection.id);
+  const catalog = useCatalog();
+  const productsInCollection = catalog.getProductsByCollection(collection.id);
   const count = productsInCollection.length;
 
   return (

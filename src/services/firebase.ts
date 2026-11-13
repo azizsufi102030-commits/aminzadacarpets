@@ -45,9 +45,14 @@ export async function uploadCarpetImage(file: File, folder: string = 'carpets'):
 
   try {
     const storageRef = ref(storage, path);
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadUrl = await getDownloadURL(snapshot.ref);
-    return downloadUrl;
+    const uploadPromise = (async () => {
+      const snapshot = await uploadBytes(storageRef, file);
+      return await getDownloadURL(snapshot.ref);
+    })();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Firebase Storage upload timed out')), 8000)
+    );
+    return await Promise.race([uploadPromise, timeoutPromise]);
   } catch (storageError) {
     console.warn('Direct Firebase Storage upload unavailable, using client compression fallback:', storageError);
     return await compressImageToDataUrl(file);
@@ -56,8 +61,13 @@ export async function uploadCarpetImage(file: File, folder: string = 'carpets'):
 
 /**
  * Compresses an image client-side to a web-optimized JPEG data URL
+ * kept compact (< ~180KB) so 4 perspectives fit comfortably within Firestore's 1MB document limit.
  */
-export function compressImageToDataUrl(file: File, maxDimension: number = 1600, quality: number = 0.82): Promise<string> {
+export function compressImageToDataUrl(
+  file: File,
+  maxDimension: number = 900,
+  quality: number = 0.72
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -86,7 +96,21 @@ export function compressImageToDataUrl(file: File, maxDimension: number = 1600, 
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // Step down quality if still large so 4 images stay well under Firestore's 1MB doc cap
+        if (dataUrl.length > 220000) {
+          dataUrl = canvas.toDataURL('image/jpeg', 0.56);
+        }
+        if (dataUrl.length > 220000) {
+          const smallCanvas = document.createElement('canvas');
+          smallCanvas.width = Math.round(width * 0.7);
+          smallCanvas.height = Math.round(height * 0.7);
+          const smallCtx = smallCanvas.getContext('2d');
+          if (smallCtx) {
+            smallCtx.drawImage(img, 0, 0, smallCanvas.width, smallCanvas.height);
+            dataUrl = smallCanvas.toDataURL('image/jpeg', 0.52);
+          }
+        }
         resolve(dataUrl);
       };
       img.onerror = () => reject(new Error('Failed to load image for compression'));

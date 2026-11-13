@@ -47,6 +47,22 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
     }
   }
 
+  private mergeCatalogItems<T extends { id: string; slug: string }>(defaults: T[], overrides: T[]): T[] {
+    const merged: T[] = [...defaults];
+    const extras: T[] = [];
+
+    for (const item of overrides) {
+      const idx = merged.findIndex((m) => m.id === item.id || m.slug === item.slug);
+      if (idx >= 0) {
+        merged[idx] = item;
+      } else {
+        extras.push(item);
+      }
+    }
+
+    return [...extras, ...merged];
+  }
+
   private initLocalCache() {
     let cachedProducts: Product[] = [];
     let cachedCollections: Collection[] = [];
@@ -62,36 +78,8 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
       }
     }
 
-    // Merge cached with static: match by id or slug
-    const prodMap = new Map<string, Product>();
-    PRODUCTS_DATA.forEach((p) => prodMap.set(p.id, p));
-    cachedProducts.forEach((cp) => {
-      let matchedKey: string | null = null;
-      for (const [key, val] of prodMap.entries()) {
-        if (key === cp.id || val.id === cp.id || val.slug === cp.slug) {
-          matchedKey = key;
-          break;
-        }
-      }
-      if (matchedKey) prodMap.delete(matchedKey);
-      prodMap.set(cp.id, cp);
-    });
-    this.products = Array.from(prodMap.values());
-
-    const colMap = new Map<string, Collection>();
-    COLLECTIONS_DATA.forEach((c) => colMap.set(c.id, c));
-    cachedCollections.forEach((cc) => {
-      let matchedKey: string | null = null;
-      for (const [key, val] of colMap.entries()) {
-        if (key === cc.id || val.id === cc.id || val.slug === cc.slug) {
-          matchedKey = key;
-          break;
-        }
-      }
-      if (matchedKey) colMap.delete(matchedKey);
-      colMap.set(cc.id, cc);
-    });
-    this.collections = Array.from(colMap.values());
+    this.products = this.mergeCatalogItems(PRODUCTS_DATA, cachedProducts);
+    this.collections = this.mergeCatalogItems(COLLECTIONS_DATA, cachedCollections);
   }
 
   public subscribe(listener: ChangeListener): () => void {
@@ -128,25 +116,7 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
             });
           });
 
-          // Merge: remote updates override static defaults by id or slug
-          const prodMap = new Map<string, Product>();
-          PRODUCTS_DATA.forEach((p) => prodMap.set(p.id, p));
-
-          remoteProducts.forEach((rp) => {
-            let matchedKey: string | null = null;
-            for (const [key, val] of prodMap.entries()) {
-              if (key === rp.id || val.id === rp.id || val.slug === rp.slug) {
-                matchedKey = key;
-                break;
-              }
-            }
-            if (matchedKey) {
-              prodMap.delete(matchedKey);
-            }
-            prodMap.set(rp.id, rp);
-          });
-
-          this.products = Array.from(prodMap.values());
+          this.products = this.mergeCatalogItems(PRODUCTS_DATA, remoteProducts);
 
           try {
             localStorage.setItem('aminzada_cached_products', JSON.stringify(this.products));
@@ -173,24 +143,7 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
             });
           });
 
-          const colMap = new Map<string, Collection>();
-          COLLECTIONS_DATA.forEach((c) => colMap.set(c.id, c));
-
-          remoteCollections.forEach((rc) => {
-            let matchedKey: string | null = null;
-            for (const [key, val] of colMap.entries()) {
-              if (key === rc.id || val.id === rc.id || val.slug === rc.slug) {
-                matchedKey = key;
-                break;
-              }
-            }
-            if (matchedKey) {
-              colMap.delete(matchedKey);
-            }
-            colMap.set(rc.id, rc);
-          });
-
-          this.collections = Array.from(colMap.values());
+          this.collections = this.mergeCatalogItems(COLLECTIONS_DATA, remoteCollections);
 
           try {
             localStorage.setItem('aminzada_cached_collections', JSON.stringify(this.collections));
@@ -273,14 +226,32 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
   }
 
   public async deleteProduct(productId: string): Promise<void> {
-    this.products = this.products.filter((p) => p.id !== productId);
+    const staticItem = PRODUCTS_DATA.find((p) => p.id === productId);
+    const currentItem = this.products.find((p) => p.id === productId);
+
+    this.products = this.products.map((p) =>
+      p.id === productId ? { ...p, published: false } : p
+    );
+    if (!staticItem) {
+      this.products = this.products.filter((p) => p.id !== productId);
+    }
+
     try {
       localStorage.setItem('aminzada_cached_products', JSON.stringify(this.products));
     } catch (e) {}
     this.notify();
 
     try {
-      await deleteDoc(doc(db, 'products', productId));
+      if (staticItem && currentItem) {
+        // Keep tombstone unpublished record in Firestore so static fallback doesn't revive it
+        await setDoc(doc(db, 'products', productId), {
+          ...currentItem,
+          published: false,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        await deleteDoc(doc(db, 'products', productId));
+      }
     } catch (err) {
       console.warn('Remote deletion note:', err);
     }
@@ -293,7 +264,7 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
       id: colId
     };
 
-    const idx = this.collections.findIndex((c) => c.id === colId);
+    const idx = this.collections.findIndex((c) => c.id === colId || c.slug === cleanCol.slug);
     if (idx >= 0) {
       this.collections[idx] = cleanCol;
     } else {
@@ -315,14 +286,30 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
   }
 
   public async deleteCollection(collectionId: string): Promise<void> {
-    this.collections = this.collections.filter((c) => c.id !== collectionId);
+    const staticItem = COLLECTIONS_DATA.find((c) => c.id === collectionId);
+    const currentItem = this.collections.find((c) => c.id === collectionId);
+
+    this.collections = this.collections.map((c) =>
+      c.id === collectionId ? { ...c, published: false } : c
+    );
+    if (!staticItem) {
+      this.collections = this.collections.filter((c) => c.id !== collectionId);
+    }
+
     try {
       localStorage.setItem('aminzada_cached_collections', JSON.stringify(this.collections));
     } catch (e) {}
     this.notify();
 
     try {
-      await deleteDoc(doc(db, 'collections', collectionId));
+      if (staticItem && currentItem) {
+        await setDoc(doc(db, 'collections', collectionId), {
+          ...currentItem,
+          published: false
+        });
+      } else {
+        await deleteDoc(doc(db, 'collections', collectionId));
+      }
     } catch (err) {
       console.warn('Remote collection deletion note:', err);
     }
@@ -378,7 +365,7 @@ class HybridFirestoreCatalogRepository implements ICatalogRepository {
   // ================= PUBLIC QUERIES =================
 
   getAllProducts(): Product[] {
-    return [...this.products];
+    return this.products.filter((p) => p.published);
   }
 
   getPublishedProducts(): Product[] {
