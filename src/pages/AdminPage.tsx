@@ -1192,7 +1192,6 @@ export function AdminPage() {
                           <input
                             type="file"
                             accept="image/*"
-                            capture="environment"
                             className="hidden"
                             disabled={isUploading}
                             onChange={(e) => {
